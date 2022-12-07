@@ -56,6 +56,8 @@ router.use('/edit-repacking-data', async (req, res) => {
     req.body.reject_qr_list.forEach(element => {
       //check if payload exist
       if(element.payload){
+        
+        //to change reject_qr_list payload status
         bulk.push(
           {
             updateOne : {
@@ -73,11 +75,13 @@ router.use('/edit-repacking-data', async (req, res) => {
           }
         );
         
+        //find in global payload qr_list
         index = result.qr_list.map(object => object.payload).indexOf(element.payload);
 
-        //remove some array
+        //remove some array from global
         if (index > -1){
           result.qr_list.splice(index, 1);
+
           // bulk.push(
           //   {
           //     updateOne : {
@@ -105,10 +109,13 @@ router.use('/edit-repacking-data', async (req, res) => {
   if(req.body.new_qr_list){
     for (const new_qr of req.body.new_qr_list) {
       if(new_qr.payload){
+        //find in global payload qr_list
         index = result.qr_list.map(object => object.payload).indexOf(new_qr.payload);
 
-        // if elemnt not found exist
+        // if elemnt not found and payload not same with global payload
         if (index < 0 && new_qr.payload != result.payload){
+
+          //find detail new_qr_list
           let elementOne = await stock_read_log.findOne({ "payload": new_qr.payload });
 
           //insert into qr_list payload
@@ -128,12 +135,10 @@ router.use('/edit-repacking-data', async (req, res) => {
           //   }
           // )
           
-          //store for count
+          //store details to qr_list
           result.qr_list.push(elementOne)
-          //count for length
-          // result.qty = result.qr_list.length;
           
-          //check if elementOne on another payload
+          //check if new_qr_list payload on another payload
           let elementAnotherPayload = await stock_read_log.findOne(
             {"qr_list.payload": new_qr.payload}
           );
@@ -146,7 +151,8 @@ router.use('/edit-repacking-data', async (req, res) => {
             .indexOf(new_qr.payload);
 
             //remove some qr_list by index
-            elementAnotherPayload.qr_list.splice(index,1);
+            elementAnotherPayload.qr_list.splice(index, 1);
+            
             bulk.push(
               {
                 updateOne : {
@@ -188,7 +194,7 @@ router.use('/edit-repacking-data', async (req, res) => {
     }
   }
 
-  //for update qty
+  //for update global payload
   bulk.push(
     {
       updateOne : {
