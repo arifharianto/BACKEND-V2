@@ -77,65 +77,65 @@ router.use('/edit-repacking-data', async (req, res) => {
 
         //remove some array
         if (index > -1){
-          result.qr_list.remove[index];
-          bulk.push(
-            {
-              updateOne : {
-                "filter" :
-                  {
-                    "payload": result.payload
-                  },
-                "update" : {
-                    $pull: {
-                      "qr_list": {
-                        "payload": element.payload
-                      }
-                    }
-                }
-              }
-            }
-          )
+          result.qr_list.splice(index, 1);
+          // bulk.push(
+          //   {
+          //     updateOne : {
+          //       "filter" :
+          //         {
+          //           "payload": result.payload
+          //         },
+          //       "update" : {
+          //           $pull: {
+          //             "qr_list": {
+          //               "payload": element.payload
+          //             }
+          //           }
+          //       }
+          //     }
+          //   }
+          // )
           //count forqty
-          result.qty = result.qr_list.length? result.qr_list.length-1: 0
+          // result.qty = result.qr_list.length;
         }
       }
     });
   }
 
   if(req.body.new_qr_list){
-    for (const element of req.body.new_qr_list) {
-      if(element.payload){
-        index = result.qr_list.map(object => object.payload).indexOf(element.payload);
+    for (const new_qr of req.body.new_qr_list) {
+      if(new_qr.payload){
+        index = result.qr_list.map(object => object.payload).indexOf(new_qr.payload);
 
         // if elemnt not found exist
-        if (index < 0 && element.payload != result.payload){
-          let elementOne = await stock_read_log.findOne({ "payload": element.payload });
+        if (index < 0 && new_qr.payload != result.payload){
+          let elementOne = await stock_read_log.findOne({ "payload": new_qr.payload });
 
           //insert into qr_list payload
-          bulk.push(
-            {
-              updateOne : {
-                "filter" :
-                  {
-                    "payload": result.payload
-                  },
-                "update" : {
-                    $push: {
-                      "qr_list": elementOne
-                    }
-                }
-              }
-            }
-          )
+          // bulk.push(
+          //   {
+          //     updateOne : {
+          //       "filter" :
+          //         {
+          //           "payload": result.payload
+          //         },
+          //       "update" : {
+          //           $push: {
+          //             "qr_list": elementOne
+          //           }
+          //       }
+          //     }
+          //   }
+          // )
           
           //store for count
           result.qr_list.push(elementOne)
           //count for length
-          result.qty = result.qr_list.length-1;
+          // result.qty = result.qr_list.length;
           
           //check if elementOne on another payload
           let elementAnotherPayload = await stock_read_log.findOne(
-            {"qr_list.payload": element.payload}
+            {"qr_list.payload": new_qr.payload}
           );
 
           //if element exist on another payload data qr_list
@@ -143,11 +143,10 @@ router.use('/edit-repacking-data', async (req, res) => {
           if(elementAnotherPayload){
             index = elementAnotherPayload.qr_list
             .map(object => object.payload)
-            .indexOf(element.payload);
-
+            .indexOf(new_qr.payload);
 
             //remove some qr_list by index
-            elementAnotherPayload.qr_list.remove[index];
+            elementAnotherPayload.qr_list.splice(index,1);
             bulk.push(
               {
                 updateOne : {
@@ -158,18 +157,13 @@ router.use('/edit-repacking-data', async (req, res) => {
                   "update" : {
                       $pull: {
                         "qr_list": {
-                          "payload": element.payload
+                          "payload": new_qr.payload
                         }
                       }
                   }
                 }
               }
             )
-
-            //count forqty elementAnother
-            elementAnotherPayload.qty = 
-            elementAnotherPayload.qr_list.length? 
-            elementAnotherPayload.qr_list.length-1: 0
 
             //for update qty
             bulk.push(
@@ -181,7 +175,7 @@ router.use('/edit-repacking-data', async (req, res) => {
                     },
                   "update" : {
                       $set: {
-                        "qty": elementAnotherPayload.qty
+                        "qty": elementAnotherPayload.qr_list.length
                       }
                   }
                 }
@@ -204,7 +198,8 @@ router.use('/edit-repacking-data', async (req, res) => {
           },
         "update" : {
             $set: {
-              "qty": result.qty
+              "qty": result.qr_list.length,
+              "qr_list": result.qr_list
             }
         }
       }
@@ -213,7 +208,7 @@ router.use('/edit-repacking-data', async (req, res) => {
   
   //bulkWrite
   let queries = await stock_read_log.bulkWrite(bulk);
-
+  console.log(queries)
   res.json({statusCode: 1, result})
 })
 
